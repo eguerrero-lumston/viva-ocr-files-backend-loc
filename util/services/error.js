@@ -1,0 +1,13 @@
+this.error1 = { status: 0, msg: 'Error #1, ruta no definida' };
+this.error2 = { status: 0, msg: 'Error #2, parametros incorrectos' };
+this.error3 = { status: 0, msg: 'Error #3, error al ejecutar la consulta' };
+this.error4 = { status: 2, msg: 'Error #4, sesión expirada' };
+this.error5 = { status: 0, msg: 'Error #5, usuario incorrecto' };
+this.error6 = { status: 0, msg: 'Error #6, usuario no encontrado' };
+this.error7 = { status: 0, msg: 'Error #7, error al iniciar sesión' };
+this.error8 = { status: 0, msg: 'Error #8, sesión expirada, favor de reiniciar la sesión' };
+this.error9 = { status: 0, msg: 'Error #9, error al buscar la sesión' };
+this.error10 = { status: 0, msg: 'Error #10, error al obtener la sesión' };
+this.error11 = { status: 0, msg: 'Error #11, error al eliminar la sesión' };
+this.error12 = { status: 0, msg: 'Error #12, no se pudo obtener el token de acceso de AzureADFS' };
+this.error13 = { status: 0, msg: 'Error #13, no se a generado ningun token de acceso de AzureADFS' };

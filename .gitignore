@@ -1,0 +1,4 @@
+node_modules/
+util/pdfuploads
+util/imageuploads
+.env

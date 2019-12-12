@@ -1,0 +1,15 @@
+{
+  "name": "textract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "textract.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Irving Crepo",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.553.0",
+    "mongoose": "^5.7.6"
+  }
+}
