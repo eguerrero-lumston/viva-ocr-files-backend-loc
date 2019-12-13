@@ -22,10 +22,10 @@ cron.schedule("*/20 * * * * *",async () => {
 /**
  * Schedule for update flights in database from mssql AIMS
  */
-cron.schedule("*/1 * * * *",async () => {
-    console.log("Updating flights database")
-    sync.getFlightsSQLServer()
-});
+// cron.schedule("*/1 * * * *",async () => {
+//     console.log("Updating flights database")
+//     sync.getFlightsSQLServer()
+// });
 //sync.getFlightsSQLServer()
 app.runServer();
 //Descomentar para iniciar el servicio de sockets
