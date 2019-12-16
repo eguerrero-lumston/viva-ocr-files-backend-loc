@@ -1,10 +1,5 @@
 
-var DocumentType = model('DocTypeModel', 'Mongo')
-var Flight = model('FlightModel', 'Mongo')
-var Block = require("../util/textract/block")
-var S3 = require("../util/s3")
-var PDFManager = require("../util/pdfmanager")
-var fs = require('fs');
+var DocumentType = model('DocTypeModel', 'Mongo');
 
 module.exports = class DocumentTypeController {
 
@@ -121,8 +116,8 @@ module.exports = class DocumentTypeController {
      */
     async update(req, res) {
         const { id } = req.body;
-        var query = {}
-        query['_id'] = id;
+        var query = { _id: id}
+        // query['_id'] = id;
 
         let doc = await DocumentType.findOne(query)
 

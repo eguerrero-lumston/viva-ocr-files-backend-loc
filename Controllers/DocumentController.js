@@ -1,6 +1,6 @@
 
-var Document = model('DocModel','Mongo')
-var Flight = model('FlightModel','Mongo')
+var Document = model('DocModel', 'Mongo')
+var Flight = model('FlightModel', 'Mongo')
 var Block = require("../util/textract/block")
 var S3 = require("../util/s3")
 var PDFManager = require("../util/pdfmanager")
@@ -14,15 +14,15 @@ var regexp = new RegExpManifest();
 
 var cleanBucket = process.env.AWS_CLEAN_BUCKET
 var docsBucket = process.env.AWS_CLEAN_BUCKET
-var awsRegion  = process.env.AWS_REGION
+var awsRegion = process.env.AWS_REGION
 
 var AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 var AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 
-var tt = new Textract(AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,"",awsRegion)
+var tt = new Textract(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, "", awsRegion)
 tt.bucket = docsBucket
 
-var s3 = new S3(AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,awsRegion)
+var s3 = new S3(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, awsRegion)
 s3.bucket = docsBucket
 
 
@@ -30,72 +30,72 @@ const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-module.exports = class DocumentController{
-    
-    constructor(){
+module.exports = class DocumentController {
+
+    constructor() {
         this.upload = this.upload.bind(this)
         this.uploadDoc = this.uploadDoc.bind(this)
     }
-    
+
     /**
      * Upload a document, in pdf and then splits it to get
      * a document for each page individualy and upload each one
      * 
      */
-    async uploadDoc(req,res){
+    async uploadDoc(req, res) {
         let doc = req.files.document;
         let pdf = new PDFManager();
-        
+
         var tmp = "./util/pdfuploads/";
-        if (!fs.existsSync(tmp)){
+        if (!fs.existsSync(tmp)) {
             fs.mkdirSync(tmp);
         }
 
-        var i = doc.name.lastIndexOf('.');  
+        var i = doc.name.lastIndexOf('.');
         var ext = doc.name.substr(i);
 
         // creating the new name based on date and time
         let d = new Date();
-        var fname_no_ext = "Manifiesto"+d.getDay()+d.getMonth()+d.getFullYear()+d.getMilliseconds();
-        
-        if(ext == ".jpg" || ext == ".png"){
+        var fname_no_ext = "Manifiesto" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds();
+
+        if (ext == ".jpg" || ext == ".png") {
             tmp = "./util/imageuploads/";
         }
 
-        if (!fs.existsSync(tmp)){
+        if (!fs.existsSync(tmp)) {
             fs.mkdirSync(tmp);
         }
 
-        var fname = fname_no_ext+ext;
-        var to = tmp+fname;
-        await pdf.moveFile(to,doc);
+        var fname = fname_no_ext + ext;
+        var to = tmp + fname;
+        await pdf.moveFile(to, doc);
         let outPdf = "";
-        if(ext == ".jpg" || ext == ".png"){
-            outPdf = await pdf.imageToPDF("imageuploads/"+fname,"pdfuploads/"+fname_no_ext+".pdf") // convert image to pdf
+        if (ext == ".jpg" || ext == ".png") {
+            outPdf = await pdf.imageToPDF("imageuploads/" + fname, "pdfuploads/" + fname_no_ext + ".pdf") // convert image to pdf
             //pdf.deleteFile(out)
         }
-        
-        let out = await pdf.split(fname_no_ext,fname_no_ext+".pdf");
+
+        let out = await pdf.split(fname_no_ext, fname_no_ext + ".pdf");
         let files = await pdf.iterate(out);
-        
-        new Promise(async (resolve,reject)=>{
-            
+
+        new Promise(async (resolve, reject) => {
+
             for (let index = 0; index < files.length; index++) {
                 const file = files[index];
                 await sleep(5000);
-                await this.upload(file.data,".pdf");
+                await this.upload(file.data, ".pdf");
             }
             pdf.deleteFolderRecursive(out)
             fs.unlinkSync(to);
-            
-            if(ext == ".jpg" || ext == ".png"){
+
+            if (ext == ".jpg" || ext == ".png") {
                 await sleep(5000); // wait 5 sec until method finish and release the resource file to delete
                 fs.unlinkSync(outPdf)
             }
             resolve("ok")
         }).then(res => res)
         // {uploaded:status200,errors:status400}
-        return res.status(200).json({message:"document uploaded successfully"});
+        return res.status(200).json({ message: "document uploaded successfully" });
     }
 
     /**
@@ -103,30 +103,30 @@ module.exports = class DocumentController{
      * when document is uploaded, starts to analayze it and store 
      * record in database od this document
      */
-    async upload(data,ext){
-        
+    async upload(data, ext) {
+
         let d = new Date();
-        var fname = "Manifiesto"+d.getDay()+d.getMonth()+d.getFullYear()+d.getMilliseconds()+ext;
-        let result = await s3.uploadFile(fname,data);
-        if(result.status == 400)
+        var fname = "Manifiesto" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds() + ext;
+        let result = await s3.uploadFile(fname, data);
+        if (result.status == 400)
             return result;
-        
+
         let new_doc = new Document();
         new_doc.name = fname;
-        new_doc.key = fname;    
-        
-        if(ext == ".pdf"){
+        new_doc.key = fname;
+
+        if (ext == ".pdf") {
             const job = await tt.analizeDocumentAsync(fname)
             new_doc.jobId = job.JobId;
             new_doc.originalJobId = job.JobId;
             await new_doc.save()
-            return {status:200}//res.status(200).json({"result":result,jobId:job})
+            return { status: 200 }//res.status(200).json({"result":result,jobId:job})
         }
-        else if(ext == ".jpg" || ext == ".png"){
+        else if (ext == ".jpg" || ext == ".png") {
             // this condition shouldn't happen because the service just process PDFs
             await tt.analizeDocument(fname)
-            
-            var parser = new TextractParser(null,fname)
+
+            var parser = new TextractParser(null, fname)
             await parser.storeInDB(tt.pages)
             var forms = await parser.forms(1)
             var matches = await parser.regex(1)
@@ -142,9 +142,9 @@ module.exports = class DocumentController{
             obj.matches = matches;
             await obj.save();
 
-            return {status:200} //res.status(200).json({manifest:obj})
-        }else{
-            return {status:400}//res.status(400).json({message:"not valid extension"})
+            return { status: 200 } //res.status(200).json({manifest:obj})
+        } else {
+            return { status: 400 }//res.status(400).json({message:"not valid extension"})
         }
     }
 
@@ -152,34 +152,34 @@ module.exports = class DocumentController{
      * This method analyze the document of given jobId 
      * and save data in an existent document in database
     */
-    async analyzeDoc(jid){
-        
-        var obj = await Document.findOne({jobId:jid})
-        if(obj.checkStatus != 0){
+    async analyzeDoc(jid) {
+
+        var obj = await Document.findOne({ jobId: jid })
+        if (obj.checkStatus != 0) {
             return null;
         }
-        
-        // create another instance of textract, it's because the data sotred in the instance
+
+        // create another instance of textract, it's because the data stored in the instance
         // makes conflicts
-        var tt = new Textract(AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,"",awsRegion)
+        var tt = new Textract(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, "", awsRegion)
         tt.bucket = docsBucket
-        var result = await tt.getDocumentAnalyzedRecursively(jid,1000)
-        
-        if(result.analyzed == false){
+        var result = await tt.getDocumentAnalyzedRecursively(jid, 1000)
+
+        if (result.analyzed == false) {
             return null;
         }
-        
+
         obj.jobStatus = "IN_PROGRESS";
         await obj.save();
-        
-        try{
-            var parser = new TextractParser(jid) 
+
+        try {
+            var parser = new TextractParser(jid)
             await parser.storeInDB(tt.pages)
-            
+
             var forms = await parser.forms(1) // Get FORMS
             var matches = await parser.regex(1) // Get matches with regular expresion from LINES
 
-            var ob = new Manifest(forms,matches);
+            var ob = new Manifest(forms, matches);
             await obj.updateOne(ob);
             obj.originalJobId = jid;
             obj.matches = matches;
@@ -187,24 +187,24 @@ module.exports = class DocumentController{
             obj.pages = 1;
             obj.page = 1;
 
-            if(result.status == "SUCCEEDED"){   
-                
-                if(ob.formatted_date != "" && 
-                ob.registration != "" &&    
-                ob.acronyms.length > 0 && 
-                ob.destination != "" && 
-                ob.origin != "" &&  
-                ob.flightNumber){
+            if (result.status == "SUCCEEDED") {
+
+                if (ob.formatted_date != "" &&
+                    ob.registration != "" &&
+                    ob.acronyms.length > 0 &&
+                    ob.destination != "" &&
+                    ob.origin != "" &&
+                    ob.flightNumber) {
                     obj.checkStatus = 2;
-                }else{          
+                } else {
                     obj.checkStatus = 1;
                 }
             }
 
-            await Block.deleteMany({jobId:jid}) // delete blocks, these won't be used anymore
+            await Block.deleteMany({ jobId: jid }) // delete blocks, these won't be used anymore
             await obj.save();
 
-        }catch(error){
+        } catch (error) {
             //if throws error, revert checkStatus
             console.log(error);
             obj.jobStatus = "NOT_PROCESSING";
@@ -212,14 +212,14 @@ module.exports = class DocumentController{
         }
         return obj;
     }
-    
+
     /**
      * @deprecated
      * Analyze a document given its jobId
      * 
      */
-    async analyze(req,res){
-        return res.status(404).json({message:"deprecated function"})
+    async analyze(req, res) {
+        return res.status(404).json({ message: "deprecated function" })
         // var jid = req.query.JobId
         // var obj = await this.analyzeDoc(jid);
         // if(!obj)
@@ -232,22 +232,22 @@ module.exports = class DocumentController{
      * and stored in database
      * 
      */
-    async find(req,res){
-        
-        const {jobId,name} = req.query
-        if(!jobId && !name){
-            var docs = await Document.paginate({checkStatus:{$in:[0,1,2,3]}},{page:1,limit:10,select:"name key jobId checkStatus jobStatus uploaded_at"})
+    async find(req, res) {
+
+        const { jobId, name } = req.query
+        if (!jobId && !name) {
+            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: 1, limit: 10, select: "name key jobId checkStatus jobStatus uploaded_at" })
             return res.status(200).json(docs)
         }
         var doc;
-        if(jobId){
-            doc = await Document.findOne({jobId:jobId})
+        if (jobId) {
+            doc = await Document.findOne({ jobId: jobId })
         }
-        else if(name){
-            doc = await Document.findOne({name:name})
-        }else{
+        else if (name) {
+            doc = await Document.findOne({ name: name })
+        } else {
             doc = {}
-        }   
+        }
         return res.status(200).json(doc)
     }
 
@@ -255,38 +255,38 @@ module.exports = class DocumentController{
      * Filtrate documents by name, by checkStatus or both
      * also this receive page and limit params to paginate data
      */
-    async tableFilter(req,res){
-        const {checkStatus,name} = req.query;
-        var {page,limit} = req.query;
+    async tableFilter(req, res) {
+        const { checkStatus, name } = req.query;
+        var { page, limit } = req.query;
         var query = {}
-        
-        if(!page) page = 1;
-        if(!limit) limit = 10;
-        else{
+
+        if (!page) page = 1;
+        if (!limit) limit = 10;
+        else {
             try {
                 limit = parseInt(limit);
-                if(limit < 0)
+                if (limit < 0)
                     limit = 10
             } catch (error) {
                 limit = 10;
             }
-        } 
-        if(name){
-            query["name"] = { "$regex": name, "$options": "i" };
-            query["checkStatus"] = {$in:[0,1,2,3]};
-        }   
-        
-        if(checkStatus) {
-            var sta = checkStatus.split(",").map(el=>{return parseInt(el)})
-            
-            query["checkStatus"] = {$in:sta};
         }
-        
-        if(!name && !checkStatus){
-            var docs = await Document.paginate({checkStatus:{$in:[0,1,2,3]}},{page:parseInt(page),limit:limit,select:"name key jobId checkStatus jobStatus uploaded_at"})
+        if (name) {
+            query["name"] = { "$regex": name, "$options": "i" };
+            query["checkStatus"] = { $in: [0, 1, 2, 3] };
+        }
+
+        if (checkStatus) {
+            var sta = checkStatus.split(",").map(el => { return parseInt(el) })
+
+            query["checkStatus"] = { $in: sta };
+        }
+
+        if (!name && !checkStatus) {
+            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: parseInt(page), limit: limit, select: "name key jobId checkStatus jobStatus uploaded_at" })
             return res.status(200).json(docs)
-        } 
-        var docs = await Document.paginate(query,{page:parseInt(page),limit:limit,select:"name key jobId checkStatus jobStatus uploaded_at"})
+        }
+        var docs = await Document.paginate(query, { page: parseInt(page), limit: limit, select: "name key jobId checkStatus jobStatus uploaded_at" })
         return res.status(200).json(docs)
     }
 
@@ -295,24 +295,24 @@ module.exports = class DocumentController{
      * this is just for documents that have been confirmed and moved to 
      * S3 clean folders
      */
-    async filter(req, res){
-        
+    async filter(req, res) {
+
         const origin = req.query.origin
         const destination = req.query.destination
         const registration = req.query.registration
         const hour = req.query.hour
         const date = req.query.date
         var query = {}
-        
-        if(origin) query["origin.acronym"] = origin;
-        if(destination) query["destination.acronym"] = destination;
-        if(registration) query["registration"] = registration;
-        if(hour) query["realHour"] = hour;
-        if(date) query["formatted_date"] = date;
+
+        if (origin) query["origin.acronym"] = origin;
+        if (destination) query["destination.acronym"] = destination;
+        if (registration) query["registration"] = registration;
+        if (hour) query["realHour"] = hour;
+        if (date) query["formatted_date"] = date;
         query["checkStatus"] = 4;
-        
-        var docs = await Document.find(query).select(["name","key"])
-        
+
+        var docs = await Document.find(query).select(["name", "key"])
+
         return res.status(200).json(docs)
     }
 
@@ -320,113 +320,113 @@ module.exports = class DocumentController{
      * updates data of document
      * 
      */
-    async update(req,res){
-        
-        const {jobId,name,formatted_date} = req.body; 
+    async update(req, res) {
+
+        const { jobId, name, formatted_date } = req.body;
         var query = {}
         query['jobId'] = jobId;
-        
+
         let doc = await Document.findOne(query)
-        
+
         await doc.updateOne(req.body)
         var date = formatted_date.split("/")
-        
+
         try {
-            if(date.length == 3){
+            if (date.length == 3) {
                 doc.date.day = date[0];
                 doc.date.month = date[1];
                 doc.date.year = date[2];
             }
         } catch (error) {
-            
+
         }
-        
+
         doc.checkStatus = 3;
         var xdate = doc.formatted_date.split("/");
         xdate = xdate[2] + "-" + xdate[1] + "-" + xdate[0];
-        doc.date_query = doc.date.year +"-"+doc.date.month+"-"+doc.date.day;
-        
+        doc.date_query = doc.date.year + "-" + doc.date.month + "-" + doc.date.day;
+
         await doc.save();
-        return res.status(200).json({message:"updated successfully"})   
+        return res.status(200).json({ message: "updated successfully" })
     }
-    
+
     /**
      * Delete a document given the jobId
      * this function deletes register in database 
      * and the file in s3 bucket
      */
-    async delete(req,res){
-        const {jobId} = req.params;
-        
-        var doc = await Document.findOne({jobId:jobId});
-        if(!doc)
-            return res.status(404).json({message:"document doesn't exists"})
-        
+    async delete(req, res) {
+        const { jobId } = req.params;
+
+        var doc = await Document.findOne({ jobId: jobId });
+        if (!doc)
+            return res.status(404).json({ message: "document doesn't exists" })
+
         const key = (doc.key != "") ? doc.key : doc.name;
         const result = await s3.deleteFile(key);
         doc.checkStatus = 5;
         await doc.save();
         //await doc.remove();
-        
-        return res.status(200).json({message:"document deleted successfully"});
+
+        return res.status(200).json({ message: "document deleted successfully" });
     }
-    
+
     /**         
      * Confirm that the document have been checked and is ready to
      * be moved to folder
      */
-    async confirm(req,res){
-        const {jobId} = req.body;
-        
-        var doc = await Document.findOne({jobId:jobId})
-        var flights = await Flight.find({flightNumber:doc.flightNumber,date_query:doc.date_query});
-        
-        if(doc.checkStatus == 4){
-            return res.status(403).json({message:"document has been already moved"})
+    async confirm(req, res) {
+        const { jobId } = req.body;
+
+        var doc = await Document.findOne({ jobId: jobId })
+        var flights = await Flight.find({ flightNumber: doc.flightNumber, date_query: doc.date_query });
+
+        if (doc.checkStatus == 4) {
+            return res.status(403).json({ message: "document has been already moved" })
         }
-        else if(doc.checkStatus != 3){
-            return res.status(403).json({message:"document can't be moved without be checked before"})
+        else if (doc.checkStatus != 3) {
+            return res.status(403).json({ message: "document can't be moved without be checked before" })
         }
-        
-        var date = doc.formatted_date.replace(/\//g,"-");   
+
+        var date = doc.formatted_date.replace(/\//g, "-");
 
         var manifestType = 1;
         var manifestTypeStr = "llegada";
-        if(doc.airport.acronym == doc.origin.acronym){
+        if (doc.airport.acronym == doc.origin.acronym) {
             manifestType = 2;
             manifestTypeStr = "salida";
         }
-        
+
         flights.forEach(async flight => {
 
-            if(manifestType == 1)
+            if (manifestType == 1)
                 flight.arrivalManifest = true;
-            else if(manifestType == 2)
+            else if (manifestType == 2)
                 flight.departureManifest = true;
-            
+
             flight.manifests += 1;
             await flight.save();
-            
+
         });
-        
-        var i = doc.name.lastIndexOf('.');  
+
+        var i = doc.name.lastIndexOf('.');
         var ext = doc.name.substr(i);
 
         /**
          * change name with flight number
          * 
          */
-        var newName = "Manifiesto_"+manifestTypeStr+"_"+doc.flightNumber+ext;
-        var newKey = date +"/"+ doc.flightNumber + "/" + newName; //doc.formattedDate+"/"+doc.name;
+        var newName = "Manifiesto_" + manifestTypeStr + "_" + doc.flightNumber + ext;
+        var newKey = date + "/" + doc.flightNumber + "/" + newName; //doc.formattedDate+"/"+doc.name;
 
-        await s3.copyFile(doc.key,newKey,null,cleanBucket);
+        await s3.copyFile(doc.key, newKey, null, cleanBucket);
         //await s3.deleteFile(doc.name);
         doc.key = newKey;
         doc.name = newName;
         doc.manifestType = manifestType;
         doc.checkStatus = 4;
         await doc.save();
-        return res.status(200).json({message:"document was moved"});
+        return res.status(200).json({ message: "document was moved" });
     }
 
     /**
@@ -434,57 +434,57 @@ module.exports = class DocumentController{
      * all request have to end with '/'
      * e.g /folders/XV-DRE/subfolder/
     */
-    async files(req,res){
-        
+    async files(req, res) {
+
         var folder = req.params.folder
         var params = (req.params.arr + req.params[0]).split('/')
         var current = (req.params.arr + req.params[0])
         //var cleanBucket = process.env.aws_clean_bucket
 
         folder = params.join('/')
-        
-        if(folder === 'undefined')
+
+        if (folder === 'undefined')
             folder = "/"
-        
-        var list = await s3.filesFromFolder(folder,cleanBucket);
-        if(list == null){
-            return res.status(400).json({message:"files not found"})
+
+        var list = await s3.filesFromFolder(folder, cleanBucket);
+        if (list == null) {
+            return res.status(400).json({ message: "files not found" })
         }
-        
+
         var folders = []
         var files = []
-        folders = list.CommonPrefixes.map(elem=>{
-            return elem.Prefix.substr(0,elem.Prefix.lastIndexOf("/"))
+        folders = list.CommonPrefixes.map(elem => {
+            return elem.Prefix.substr(0, elem.Prefix.lastIndexOf("/"))
         })
-        
-        list = list.Contents.map(elem =>{
-            var paths = elem.Key.replace(current,"")
-            .split("/")
-            .filter(el =>{
-                return el != ""
-            })
-            
-            if(paths.length == 1){
-                if(paths[0].lastIndexOf(".pdf") == -1 &&
+
+        list = list.Contents.map(elem => {
+            var paths = elem.Key.replace(current, "")
+                .split("/")
+                .filter(el => {
+                    return el != ""
+                })
+
+            if (paths.length == 1) {
+                if (paths[0].lastIndexOf(".pdf") == -1 &&
                     paths[0].lastIndexOf(".jpg") == -1 &&
-                    paths[0].lastIndexOf(".png") == -1 )
+                    paths[0].lastIndexOf(".png") == -1)
                     folders.push(paths[0])
                 else
-                    files.push({ name:paths[0],key:elem.Key})  
-            }else{
+                    files.push({ name: paths[0], key: elem.Key })
+            } else {
                 folders.push(paths[0]);
             }
-            
+
             var i = elem.Key.lastIndexOf("/")
-            if(elem.Key.substr(i + 1).lastIndexOf(".") == -1 ){
+            if (elem.Key.substr(i + 1).lastIndexOf(".") == -1) {
                 folders.push()
-                return; 
-            }else if(elem.Key.substr(i + 1).lastIndexOf(".") == -1 && paths.length == 1){
+                return;
+            } else if (elem.Key.substr(i + 1).lastIndexOf(".") == -1 && paths.length == 1) {
                 files.push(elem.Key.substr(i + 1))
             }
-            return {name:elem.Key.substr(i + 1), path:elem.Key} 
+            return { name: elem.Key.substr(i + 1), path: elem.Key }
         })
-        return res.status(200).json({folders:folders,files:files})
+        return res.status(200).json({ folders: folders, files: files })
     }
 
     /**
@@ -493,10 +493,10 @@ module.exports = class DocumentController{
      * works for temporal files.
      * 
      */
-    async getTmpUrl(req,res){
-        var {key} = req.query
-        const url = await s3.getUrlObject(key,s3.bucket);
-        return res.status(200).json({url:url})
+    async getTmpUrl(req, res) {
+        var { key } = req.query
+        const url = await s3.getUrlObject(key, s3.bucket);
+        return res.status(200).json({ url: url })
     }
 
     /**
@@ -505,25 +505,25 @@ module.exports = class DocumentController{
      * works for moved files to clean bucket.
      * 
      */
-    async getCleanUrl(req,res){
-        var {key} = req.query
-        const url = await s3.getUrlObject(key,cleanBucket);
-        return res.status(200).json({url:url})
+    async getCleanUrl(req, res) {
+        var { key } = req.query
+        const url = await s3.getUrlObject(key, cleanBucket);
+        return res.status(200).json({ url: url })
     }
 
     /**
      * Get the suggestions of table's filters
      * search in stored docs and get the data from them
      */
-    async getFilterSuggestions(req,res){
-        var origins = await Document.find({"origin.acronym":{$ne:""}}).distinct("origin.acronym")//.select(["origin.acronym","destination.acronym"])
-        var destinations = await Document.find({"destination.acronym":{$ne:""}}).distinct("destination.acronym")
-        var registrations = await Document.find({"registration":{$ne:""}}).distinct("registration")
+    async getFilterSuggestions(req, res) {
+        var origins = await Document.find({ "origin.acronym": { $ne: "" } }).distinct("origin.acronym")//.select(["origin.acronym","destination.acronym"])
+        var destinations = await Document.find({ "destination.acronym": { $ne: "" } }).distinct("destination.acronym")
+        var registrations = await Document.find({ "registration": { $ne: "" } }).distinct("registration")
         return res.status(200).json({
-            "origins":origins,
-            "destinations":destinations,
-            "registrations":registrations
+            "origins": origins,
+            "destinations": destinations,
+            "registrations": registrations
         });
     }
-    
+
 }
