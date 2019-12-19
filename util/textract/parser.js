@@ -54,7 +54,7 @@ module.exports = class Parser{
      * Search key-value blocks in database and formats
      * this as Json array
      */
-    async forms(page){
+    async zforms(page){
         var query = this.getQuery('KEY_VALUE_SET',page)
         var form_list = []
         

@@ -77,10 +77,10 @@ module.exports = class DocumentTypeController {
         }
 
         if (!name) {
-            var docs = await Document.paginate({ deleted: null }, { page: parseInt(page), limit: limit, select: "_id name position" })
+            var docs = await DocumentType.paginate({ deleted: null }, { page: parseInt(page), limit: limit, select: "_id name position" })
             return res.status(200).json(docs)
         }
-        var docs = await Document.paginate(query, { page: parseInt(page), limit: limit, select: "_id name position" })
+        var docs = await DocumentType.paginate(query, { page: parseInt(page), limit: limit, select: "_id name position" })
         return res.status(200).json(docs)
     }
 
@@ -105,7 +105,7 @@ module.exports = class DocumentTypeController {
         if (date) query["formatted_date"] = date;
         query["checkStatus"] = 4;
 
-        var docs = await Document.find(query).select(["name", "key"])
+        var docs = await DocumentType.find(query).select(["name", "key"])
 
         return res.status(200).json(docs)
     }
@@ -115,12 +115,12 @@ module.exports = class DocumentTypeController {
      * 
      */
     async update(req, res) {
-        const { id } = req.body;
-        var query = { _id: id}
+        const { _id, textToRecognize } = req.body;
+        var query = { _id}
         // query['_id'] = id;
 
         let doc = await DocumentType.findOne(query)
-
+        doc.text_to_recognize = textToRecognize;
         await doc.updateOne(req.body, function (err, result) {
             if (err) return res.status(409).json({ message: "An error has ocurred", error: err });
             return res.status(200).json({ message: `updated successfully ${result.n} documents` })

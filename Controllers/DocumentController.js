@@ -1,33 +1,33 @@
 
-var Document = model('DocModel', 'Mongo')
-var Flight = model('FlightModel', 'Mongo')
-var Block = require("../util/textract/block")
-var S3 = require("../util/s3")
-var PDFManager = require("../util/pdfmanager")
+var Document = model('DocModel', 'Mongo');
+var Flight = model('FlightModel', 'Mongo');
+var Block = require("../util/textract/block");
+var S3 = require("../util/s3");
+var PDFManager = require("../util/pdfmanager");
 var fs = require('fs');
 
-var Textract = require("../util/textract/textract")
-const TextractParser = require("../util/textract/parser")
-var Manifest = require("../util/textract/manifest")
-var RegExpManifest = require("../util/textract/regex")
+var Textract = require("../util/textract/textract");
+const TextractParser = require("../util/textract/parser");
+var Manifest = require("../util/textract/manifest");
+var RegExpManifest = require("../util/textract/regex");
 var regexp = new RegExpManifest();
 
-var cleanBucket = process.env.AWS_CLEAN_BUCKET
-var docsBucket = process.env.AWS_CLEAN_BUCKET
-var awsRegion = process.env.AWS_REGION
+var cleanBucket = process.env.AWS_CLEAN_BUCKET;
+var docsBucket = process.env.AWS_CLEAN_BUCKET;
+var awsRegion = process.env.AWS_REGION;
 
 var AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID;
 var AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY;
 
-var tt = new Textract(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, "", awsRegion)
-tt.bucket = docsBucket
+var tt = new Textract(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, "", awsRegion);
+tt.bucket = docsBucket;
 
-var s3 = new S3(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, awsRegion)
-s3.bucket = docsBucket
+var s3 = new S3(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, awsRegion);
+s3.bucket = docsBucket;
 
 
 const sleep = (milliseconds) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
 module.exports = class DocumentController {
@@ -56,7 +56,7 @@ module.exports = class DocumentController {
 
         // creating the new name based on date and time
         let d = new Date();
-        var fname_no_ext = "Manifiesto" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds();
+        var fname_no_ext = "File" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds();
 
         if (ext == ".jpg" || ext == ".png") {
             tmp = "./util/imageuploads/";
@@ -106,7 +106,7 @@ module.exports = class DocumentController {
     async upload(data, ext) {
 
         let d = new Date();
-        var fname = "Manifiesto" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds() + ext;
+        var fname = "File" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds() + ext;
         let result = await s3.uploadFile(fname, data);
         if (result.status == 400)
             return result;
