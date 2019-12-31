@@ -4,43 +4,22 @@ var regex = new ( require("./regex"))
 
 
 /**
- *                  Manifest parser class
+ *                  File parser class
  * this class was made for parse all data retrieved from 
  * amazon textract, parsed in a json, and depending of the 
  * fields in json, determine by key name, fill the neccessary 
  * data for manifest
  * 
  */
-module.exports = class ManifestParser{
+module.exports = class FileParser{
     
     constructor(data, matches = {}){
         this[_data] = data
-        this.folio = ""
-        this.date = {}
-        this.formatted_date = ""
-        this.date_query = "";
-        this.airport = {name:"",acronym:""}
-        this.company = {name:"",acronym:""} //required
-        this.equipment = ""
-        this.registration = "" // matricula
-        this.acronyms = [] // siglas
-        this.licences = [] // required for officer one
-        this.flightNumber = ""
-        this.commander = {name:"",licence:""} 
-        this.officerOne = {name:"",licence:""}  //required
-        this.officerTwo = {name:"",licence:""} 
-        this.officerThree = {name:"",licence:""} 
-        this.senior = {name:"",licence:""}  // Mayor
-        this.surchargeOne = {name:"",licence:""}
-        this.surchargeTwo = {name:"",licence:""}
-        this.surchargeThree = {name:"",licence:""}
-        this.surcharges = []
-        this.origin = {name:"",acronym:""}
-        this.destination = {name:"",acronym:""}
-        this.nextScale = {name:"",acronym:""}
-        this.intineraryHour = ""
-        this.realHour = ""
-        this.delayReason = ""
+        this.year = matches.year || null;
+        this.name = matches.name || "";
+        this.fatherLastname = matches.fatherLastname || "";
+        this.motherLastname = matches.motherLastname || "";
+        this.courseName = matches.courseName || "";
         this.passengers = {
             children:[],
             total:[]
@@ -52,9 +31,7 @@ module.exports = class ManifestParser{
     }
 
     _parser(){
-        
-        var date = "";
-        var day = "",month = "",year = "";
+        var year = "";
         this[_data].forEach(element => {
             var keys = Object.keys(element)
             
@@ -175,57 +152,9 @@ module.exports = class ManifestParser{
                     case 'CAUSA DE LA DEMORA': this.delayReason = element[key]; break;
                 }  
             } 
-            this.date = {
-                day: day,
-                month:month,
-                year:year
-            }
             
         });
         
-        if(this.formatted_date == "" || this.formatted_date == null){
-            this.formatted_date = day + "/" + month + "/" + year;
-            this.date_query = year + "-" + month + "-" + day;
-        }
-        
-        // validate if is correct the date format.
-        if(!regex.regexDate(this.formatted_date)){
-            if(this.matches.dates)
-                if(this.matches.dates.length > 0) {
-                    this.formatted_date = this.matches.dates[0]
-                    var splitted = this.formatted_date.split("/")
-                    this.date_query = splitted[2] + "-" + splitted[1] + "-" + splitted[0];
-                }
-        }
-        
-        var used = [];
-        var tmp_ac = [];
-        this.acronyms.forEach(el=>{
-            tmp_ac.push(el)
-        })
-        
-        this.acronyms.forEach(elem=>{
-            
-            if(regex.regexContains(this.airport.name,elem)){
-                this.airport.acronym = elem;
-                used.push(elem);
-                tmp_ac.splice(tmp_ac.indexOf(elem),1);
-            }
-
-            if( regex.regexContains(this.origin.name,elem)){
-                this.origin.acronym = elem;
-                used.push(elem);
-                tmp_ac.splice(tmp_ac.indexOf(elem),1);
-            }
-            
-            if(regex.regexContains(this.destination.name,elem)){
-                this.destination.acronym = elem;
-                used.push(elem)
-                tmp_ac.splice(tmp_ac.indexOf(elem),1);
-            }
-        })
-        if(tmp_ac.length > 0)
-            this.company.acronym = tmp_ac[0];
 
     }
     

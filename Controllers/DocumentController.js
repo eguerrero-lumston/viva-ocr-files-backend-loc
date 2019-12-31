@@ -8,9 +8,9 @@ var fs = require('fs');
 
 var Textract = require("../util/textract/textract");
 const TextractParser = require("../util/textract/parser");
-var Manifest = require("../util/textract/manifest");
-var RegExpManifest = require("../util/textract/regex");
-var regexp = new RegExpManifest();
+var FileParser = require("../util/textract/file-parse");
+var RegExpFileParser = require("../util/textract/regex");
+var regexp = new RegExpFileParser();
 
 var cleanBucket = process.env.AWS_CLEAN_BUCKET;
 var docsBucket = process.env.AWS_CLEAN_BUCKET;
@@ -95,7 +95,7 @@ module.exports = class DocumentController {
             resolve("ok")
         }).then(res => res)
         // {uploaded:status200,errors:status400}
-        return res.status(200).json({ message: "document uploaded successfully" });
+        return res.status(200).json({ message: "document uploaded successfully " + fname_no_ext });
     }
 
     /**
@@ -131,7 +131,7 @@ module.exports = class DocumentController {
             var forms = await parser.forms(1)
             var matches = await parser.regex(1)
 
-            var ob = new Manifest(forms)
+            var ob = new FileParser(forms)
             var obj = new Document(ob)
             obj.jobId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
             obj.originalJobId = obj.jobId;
@@ -178,8 +178,8 @@ module.exports = class DocumentController {
 
             var forms = await parser.forms(1) // Get FORMS
             var matches = await parser.regex(1) // Get matches with regular expresion from LINES
-
-            var ob = new Manifest(forms, matches);
+            // console.log(tt.pages);
+            var ob = new FileParser(forms, matches);
             await obj.updateOne(ob);
             obj.originalJobId = jid;
             obj.matches = matches;
@@ -188,13 +188,11 @@ module.exports = class DocumentController {
             obj.page = 1;
 
             if (result.status == "SUCCEEDED") {
-
-                if (ob.formatted_date != "" &&
-                    ob.registration != "" &&
-                    ob.acronyms.length > 0 &&
-                    ob.destination != "" &&
-                    ob.origin != "" &&
-                    ob.flightNumber) {
+                if (ob.matches.year != 0 &&
+                    ob.matches.name != "" &&
+                    ob.matches.motherLastname != "" &&
+                    ob.matches.fatherLastname != "" &&
+                    ob.matches.courseName != "" ) {
                     obj.checkStatus = 2;
                 } else {
                     obj.checkStatus = 1;
@@ -400,9 +398,9 @@ module.exports = class DocumentController {
         flights.forEach(async flight => {
 
             if (manifestType == 1)
-                flight.arrivalManifest = true;
+                flight.arrivalFileParser = true;
             else if (manifestType == 2)
-                flight.departureManifest = true;
+                flight.departureFileParser = true;
 
             flight.manifests += 1;
             await flight.save();

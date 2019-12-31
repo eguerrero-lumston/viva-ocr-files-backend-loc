@@ -24,7 +24,7 @@ module.exports = class PDFManager{
         if (!fs.existsSync(outputDir)){
             fs.mkdirSync(outputDir);
         }
-        pdfDoc.split(outputDir, 'manifest-page').endPDF();
+        pdfDoc.split(outputDir, 'file-page').endPDF();
         
         return outputDir;
     }
@@ -45,11 +45,16 @@ module.exports = class PDFManager{
                 } 
                 var files_path = [];
                 for (let index = 0; index < files.length; index++) {
+                    // console.log('isOdd(index)', page % 2 == 1, index, page);
                     const file = files[index];
                     var file_p = path.join(directoryPath,file);
                     var pdf = fs.readFileSync(file_p);
-                    var npdf = {path:file_p,data:pdf}
-                    files_path.push(npdf);
+                    // console.log('file_p', file, file.match(/\d+/));
+                    var page = Number(file.match(/\d+/)[0]);
+                    if (page % 2 == 1) {
+                        var npdf = {path:file_p,data:pdf}
+                        files_path.push(npdf);
+                    }
                 }
                 return resolve(files_path)
             });

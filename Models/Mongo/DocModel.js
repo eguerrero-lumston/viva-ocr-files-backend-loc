@@ -18,6 +18,7 @@ var Doc = new Schema({
     name: { type: String, default: '' },
     fatherLastname: { type: String, default: '' },
     motherLastname: { type: String, default: '' },
+    courseName: { type: String, default: null },
     year: { type: Number, default: null },
     jobId: { type: String, default: '' },
     originalJobId: { type: String, default: '' },
