@@ -101,6 +101,22 @@ module.exports = class S3{
             });
         });
     }
+    
+    /**
+     * Get a signed url to get a protected file in S3 bucket
+     * given a key file, it expires in 300 sec
+     * 
+     * @param {String} key 
+     */
+    async getObject(key,bucket = this.bucket){
+        var params = {Bucket: bucket, Key: key};
+        return new Promise((resolve,reject)=>{
+            s3.getObject(params, function (err, data) {
+                if(err) return reject(err);
+                else resolve(data);  
+            });
+        });
+    }
 
     /**
      * Create a bucket given the bucket name

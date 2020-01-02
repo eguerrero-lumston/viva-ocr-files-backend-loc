@@ -10,6 +10,8 @@ var Textract = require("../util/textract/textract");
 const TextractParser = require("../util/textract/parser");
 var FileParser = require("../util/textract/file-parse");
 var RegExpFileParser = require("../util/textract/regex");
+var spsave = require("spsave").spsave;
+
 var regexp = new RegExpFileParser();
 
 var cleanBucket = process.env.AWS_CLEAN_BUCKET;
@@ -193,7 +195,7 @@ module.exports = class DocumentController {
                     ob.matches.motherLastname != "" &&
                     ob.matches.fatherLastname != "" &&
                     ob.matches.courseName != "" ) {
-                    obj.checkStatus = 2;
+                    obj.checkStatus = 3;
                 } else {
                     obj.checkStatus = 1;
                 }
@@ -234,7 +236,7 @@ module.exports = class DocumentController {
 
         const { jobId, name } = req.query
         if (!jobId && !name) {
-            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: 1, limit: 10, select: "name key jobId checkStatus jobStatus uploaded_at" })
+            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: 1, limit: 10, select: "name year fatherLastname motherLastname key jobId checkStatus jobStatus uploaded_at" })
             return res.status(200).json(docs)
         }
         var doc;
@@ -376,55 +378,50 @@ module.exports = class DocumentController {
     async confirm(req, res) {
         const { jobId } = req.body;
 
-        var doc = await Document.findOne({ jobId: jobId })
-        var flights = await Flight.find({ flightNumber: doc.flightNumber, date_query: doc.date_query });
+        var doc = await Document.findOne({ jobId: jobId });
 
-        if (doc.checkStatus == 4) {
+        if (doc.checkStatus === 4) {
             return res.status(403).json({ message: "document has been already moved" })
         }
-        else if (doc.checkStatus != 3) {
-            return res.status(403).json({ message: "document can't be moved without be checked before" })
-        }
-
-        var date = doc.formatted_date.replace(/\//g, "-");
-
-        var manifestType = 1;
-        var manifestTypeStr = "llegada";
-        if (doc.airport.acronym == doc.origin.acronym) {
-            manifestType = 2;
-            manifestTypeStr = "salida";
-        }
-
-        flights.forEach(async flight => {
-
-            if (manifestType == 1)
-                flight.arrivalFileParser = true;
-            else if (manifestType == 2)
-                flight.departureFileParser = true;
-
-            flight.manifests += 1;
-            await flight.save();
-
-        });
-
-        var i = doc.name.lastIndexOf('.');
-        var ext = doc.name.substr(i);
-
-        /**
-         * change name with flight number
-         * 
-         */
-        var newName = "Manifiesto_" + manifestTypeStr + "_" + doc.flightNumber + ext;
-        var newKey = date + "/" + doc.flightNumber + "/" + newName; //doc.formattedDate+"/"+doc.name;
-
-        await s3.copyFile(doc.key, newKey, null, cleanBucket);
-        //await s3.deleteFile(doc.name);
-        doc.key = newKey;
-        doc.name = newName;
-        doc.manifestType = manifestType;
+        // else if (doc.checkStatus != 3) {
+        //     return res.status(403).json({ message: "document can't be moved without be checked before" })
+        // }
         doc.checkStatus = 4;
         await doc.save();
-        return res.status(200).json({ message: "document was moved" });
+        const obj = await s3.getObject(doc.key, cleanBucket);
+        var nameFile = `${doc.year} ${doc.fatherLastname} ${doc.motherLastname}.pdf`;
+
+        var coreOptions = {
+            siteUrl: 'https://lumston.sharepoint.com/sites/Softwareengineering'
+        };
+        var creds = {
+            username: 'eguerrero@lumston.com',
+            password: 'shericksam1996A'
+        };
+        var fileOptions = {
+            folder: 'Documentos compartidos/OCR Expedientes',
+            fileName: nameFile,
+            fileContent: obj.Body
+        };
+        spsave(coreOptions, creds, fileOptions)
+            .then(function () {
+                console.log('saved');
+                return res.status(200).json({ message: "files saved" })
+            })
+            .catch(function (err) {
+                console.log(err);
+                return res.status(err.statusCode).json({ message: "An error has ocurred", error: err });
+            });
+        // return res.status(200).json({ message: "document was moved" });
+    }
+
+    async getFile(req, res) {
+        const { jobId } = req.body;
+
+        var doc = await Document.findOne({ jobId: jobId });
+        const obj = await s3.getObject(doc.key, cleanBucket);
+        console.log(obj);
+        return res.status(200).json( {obj: obj.Body});
     }
 
     /**

@@ -11,13 +11,6 @@ module.exports = class Parser {
     async regex(page) {
         var query = this.getQuery("LINE", page)
         var matches = {
-            registrations: [],
-            destinations: [],
-            origins: [],
-            dates: [],
-            acronyms: [],
-            flightNumbers: [],
-            names: [],
             year: 0,
             name: "",
             motherLastname: "",
@@ -46,15 +39,8 @@ module.exports = class Parser {
             } else if (regex.regexIsBeforeFile(key) && indexBeforeFile === -2) {
                 indexBeforeFile = index;
             }
-            else if (regex.regexWord(key) && key.length > 3) {
-
-                !(matches.origins.includes(key)) ? matches.origins.push(key) : null;
-                !(matches.destinations.includes(key)) ? matches.destinations.push(key) : null;
-                !(matches.names.includes(key)) ? matches.names.push(key) : null;
-
-            }
             if (index === (indexBeforeName + 1)) {
-                var keyUpper = key.toUpperCase();
+                var keyUpper = key.toLowerCase();
                 var fullname = keyUpper.replace("A:", "").trim();
                 var fullname = keyUpper.replace("MR.", "").trim();
                 var fullname = keyUpper.replace("MRS.", "").trim();
@@ -84,7 +70,7 @@ module.exports = class Parser {
 
             }
             if (index === (indexBeforeFile + 1)) {
-                var keyUpper = key.toUpperCase();
+                var keyUpper = key.toLowerCase();
                 // console.log('course--->', keyUpper);
                 (matches.courseName === "") ? matches.courseName = keyUpper : null;
             }

@@ -4,6 +4,7 @@ var apiMiddleware = require("../Middlewares/apiMiddleware");
 var cors = require('cors');
 
 var DocController = new (require("../Controllers/DocumentController"))
+var ShareponiController = new (require("../Controllers/ShareponiController"))
 var DocTypeController = new (require("../Controllers/DocumentTypeController"))
 var ReportsController = new (require("../Controllers/ReportController"))
 var UserController = new (require("../Controllers/UserController"))
@@ -47,6 +48,7 @@ routes.group("/api", (router) => {
     router.get('/docs/filter/table', DocController.tableFilter) // look for documents with specific name and checkStatus 1, 2 or 3
     router.get('/docs/filter/suggestions', DocController.getFilterSuggestions) // Get suggestions for filter
     router.post('/docs/confirm', DocController.confirm) // confirm that the document is correct, and then moves to a new folder or an existent
+    router.post('/docs/getFile', DocController.getFile) // confirm that the document is correct, and then moves to a new folder or an existent
 
     // Documents types
     router.post('/docs-type', DocTypeController.add);
@@ -62,5 +64,7 @@ routes.group("/api", (router) => {
     //Reports resources
     router.get('/reports', ReportsController.all)
     router.get('/reports/not-generated', ReportsController.notGenerated)
+
+    router.get('/activeD', ShareponiController.upload)
 
 })
