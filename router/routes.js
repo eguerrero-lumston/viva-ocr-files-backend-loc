@@ -66,5 +66,13 @@ routes.group("/api", (router) => {
     router.get('/reports/not-generated', ReportsController.notGenerated)
 
     router.get('/activeD', ShareponiController.upload)
+    
+    // Users
+    router.post('/users', UserController.add) // upload document to store in s3 
+    router.get('/users', throttle({ "burst": 5, "period": "1s" }), UserController.find) // get a list of users stored 
+    router.put('/users', UserController.update) // update a manifest doc in database and moves to s3 folder 
+    router.delete('/users/:id', UserController.delete) // deletes a document given a jobId 
+    router.get('/users/filter/table', UserController.tableFilter) // look for documents with specific name and checkStatus 1, 2 or 3
+
 
 })

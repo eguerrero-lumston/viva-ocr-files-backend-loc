@@ -13,7 +13,7 @@ var DocType = new Schema({
     name: { type: String, default: '' },
     position: { type: Number, default: '' },
     positionName: { type: String, default: '' },
-    text_to_recognize: { type: String, default: '' },
+    textToRecognize: { type: String, default: '' },
     created: { type: Date, default: new Date },
     deleted: { type: Date, default: null }
 });

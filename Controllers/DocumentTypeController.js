@@ -16,7 +16,7 @@ module.exports = class DocumentTypeController {
         const { position, name, textToRecognize } = req.body;
 
         let doc = new DocumentType();
-        doc.text_to_recognize = textToRecognize;
+        doc.textToRecognize = textToRecognize;
         doc.name = name;
         doc.position = position;
 
@@ -36,7 +36,7 @@ module.exports = class DocumentTypeController {
         const { id, name } = req.query
         
         if (!id && !name) {
-            var docs = await DocumentType.paginate({ deleted: null }, { page: 1, limit: 10, select: "_id name position" })
+            var docs = await DocumentType.paginate({ deleted: null }, { page: 1, limit: 10, select: "_id name position", virtuals: true  })
             return res.status(200).json(docs)
         }
         var doc;
@@ -48,6 +48,7 @@ module.exports = class DocumentTypeController {
         } else {
             doc = {}
         }
+        doc.toObject({ virtuals: true });
         return res.status(200).json(doc)
     }
 
@@ -120,7 +121,7 @@ module.exports = class DocumentTypeController {
         // query['_id'] = id;
 
         let doc = await DocumentType.findOne(query)
-        doc.text_to_recognize = textToRecognize;
+        doc.textToRecognize = textToRecognize;
         await doc.updateOne(req.body, function (err, result) {
             if (err) return res.status(409).json({ message: "An error has ocurred", error: err });
             return res.status(200).json({ message: `updated successfully ${result.n} documents` })
