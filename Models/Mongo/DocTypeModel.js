@@ -10,10 +10,10 @@ var Schema = mongoose.Schema, ObjectId = Schema.ObjectId;
 */
 
 var DocType = new Schema({
-    name: { type: String, default: '' },
+    name: { type: String, default: ''},
     position: { type: Number, default: '' },
     positionName: { type: String, default: '' },
-    textToRecognize: { type: String, default: '' },
+    textToRecognize: { type: String, default: null, text: true  },
     created: { type: Date, default: new Date },
     deleted: { type: Date, default: null }
 });

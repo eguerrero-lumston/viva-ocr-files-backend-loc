@@ -28,7 +28,7 @@ var Doc = new Schema({
     pages: { type: Number },
     page: { type: Number },
     uploaded_at: { type: Date, default: Date.now() },
-    couser: { },
+    course: { type: Schema.Types.ObjectId, ref: "docTypes" },
 });
 
 Doc.pre('save', function (next) {

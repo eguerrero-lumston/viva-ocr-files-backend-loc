@@ -27,7 +27,7 @@ module.exports = class FileParser{
         
         this.matches = matches
         
-        this._parser()
+        // this._parser()
     }
 
     _parser(){

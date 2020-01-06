@@ -1,5 +1,6 @@
 
 var Document = model('DocModel', 'Mongo');
+var DocType = model('DocTypeModel', 'Mongo');
 var Flight = model('FlightModel', 'Mongo');
 var Block = require("../util/textract/block");
 var S3 = require("../util/s3");
@@ -30,6 +31,54 @@ s3.bucket = docsBucket;
 
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+
+const confirmAndShare = async (jobId, res) => {
+    var doc = await Document.findOne({ jobId: jobId }).populate('course');
+
+    if (doc.checkStatus === 4) {
+        if (res)
+            return res.status(403).json({ message: "document has been already moved" });
+        else
+            return;
+    }
+    // else if (doc.checkStatus != 3) {
+    //     return res.status(403).json({ message: "document can't be moved without be checked before" })
+    // }
+    doc.checkStatus = 4;
+    await doc.save();
+    const obj = await s3.getObject(doc.key, cleanBucket);
+    var courseName = doc.course != null ? doc.course.name : '';
+    var nameFile = `${doc.year} ${doc.fatherLastname} ${doc.motherLastname}  ${courseName}.pdf`;
+
+    var coreOptions = {
+        siteUrl: 'https://lumston.sharepoint.com/sites/Softwareengineering'
+    };
+    var creds = {
+        username: 'eguerrero@lumston.com',
+        password: 'shericksam1996A'
+    };
+    var fileOptions = {
+        folder: 'Documentos compartidos/OCR Expedientes',
+        fileName: nameFile,
+        fileContent: obj.Body
+    };
+    spsave(coreOptions, creds, fileOptions)
+        .then(function () {
+            console.log('saved');
+            if (res)
+                return res.status(200).json({ message: "files saved" });
+            else
+                return;
+        })
+        .catch(function (err) {
+            console.log(err);
+            if (res)
+                return res.status(err.statusCode).json({ message: "An error has ocurred", error: err });
+            else
+                return;
+        });
 }
 
 module.exports = class DocumentController {
@@ -188,21 +237,65 @@ module.exports = class DocumentController {
             obj.jobStatus = result.status;
             obj.pages = 1;
             obj.page = 1;
-
-            if (result.status == "SUCCEEDED") {
-                if (ob.matches.year != 0 &&
-                    ob.matches.name != "" &&
-                    ob.matches.motherLastname != "" &&
-                    ob.matches.fatherLastname != "" &&
-                    ob.matches.courseName != "" ) {
-                    obj.checkStatus = 3;
-                } else {
-                    obj.checkStatus = 1;
-                }
-            }
-
+            // obj.
             await Block.deleteMany({ jobId: jid }) // delete blocks, these won't be used anymore
-            await obj.save();
+            const accentsTidy = function (s) {
+                var r = s.toLowerCase();
+                r = r.replace(new RegExp(/\s/g), "");
+                r = r.replace(new RegExp(/[àáâãäå]/g), "a");
+                r = r.replace(new RegExp(/æ/g), "ae");
+                r = r.replace(new RegExp(/ç/g), "c");
+                r = r.replace(new RegExp(/[èéêë]/g), "e");
+                r = r.replace(new RegExp(/[ìíîï]/g), "i");
+                r = r.replace(new RegExp(/ñ/g), "n");
+                r = r.replace(new RegExp(/[òóôõö]/g), "o");
+                r = r.replace(new RegExp(/œ/g), "oe");
+                r = r.replace(new RegExp(/[ùúûü]/g), "u");
+                r = r.replace(new RegExp(/[ýÿ]/g), "y");
+                r = r.replace(new RegExp(/\W/g), "");
+                return r;
+            };
+            // var arrayOfTags = ob.matches.courseName.split(" ");
+            // console.log('arrayOfTags', arrayOfTags); , $language: 'es', $caseSensitive: false, $diacriticSensitive: false 
+            await DocType.find({ textToRecognize: { $ne: null } }, function (err, doctypes) {
+                // await DocType.findOne( { $text: { $search: ob.matches.courseName } } , function (err, doctype) {
+                // await DocType.findOne( { textToRecognize: { $elemMatch: arrayOfTags, $exists: true } } , function (err, doctype) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    doctypes.forEach(doctype => {
+                        if (doctype.textToRecognize !== '') {
+                            var textToRecognize = accentsTidy(doctype.textToRecognize);
+                            var text = accentsTidy(ob.matches.courseName);
+                            console.log('doctype', textToRecognize.includes(text), doctype);
+                            if (textToRecognize.includes(text)) {
+                                obj.course = doctype._id;
+                                // console.log('obj.course------------>', obj.course)
+                                return;
+                            }
+                        }
+                        // if (doctype){
+                        //     obj.course = doctype._id;
+                        // }
+                    });
+                    if (result.status == "SUCCEEDED") {
+                        if (ob.matches.year != 0 &&
+                            ob.matches.name != "" &&
+                            ob.matches.motherLastname != "" &&
+                            ob.matches.fatherLastname != "" &&
+                            obj.course != null) {
+                            obj.checkStatus = 3;
+                        } else {
+                            obj.checkStatus = 1;
+                        }
+                    }
+                    // console.log('saved------------>', obj.course)
+                    obj.save();
+                }
+            });
+            if(obj.checkStatus == 3){
+                confirmAndShare(jid);
+            }
 
         } catch (error) {
             //if throws error, revert checkStatus
@@ -236,15 +329,22 @@ module.exports = class DocumentController {
 
         const { jobId, name } = req.query
         if (!jobId && !name) {
-            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: 1, limit: 10, select: "name year fatherLastname motherLastname key jobId checkStatus jobStatus uploaded_at" })
+            var options = {
+                page: 1,
+                populate: 'course',
+                select: "name year fatherLastname motherLastname key jobId checkStatus jobStatus uploaded_at",
+                limit: 10
+            };
+            var docs = await Document
+                .paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, options);
             return res.status(200).json(docs)
         }
         var doc;
         if (jobId) {
-            doc = await Document.findOne({ jobId: jobId })
+            doc = await Document.findOne({ jobId: jobId }).populate('course');
         }
         else if (name) {
-            doc = await Document.findOne({ name: name })
+            doc = await Document.findOne({ name: name }).populate('course');
         } else {
             doc = {}
         }
@@ -259,6 +359,7 @@ module.exports = class DocumentController {
         const { checkStatus, name } = req.query;
         var { page, limit } = req.query;
         var query = {}
+        var select = "name year fatherLastname motherLastname key jobId checkStatus jobStatus uploaded_at";
 
         if (!page) page = 1;
         if (!limit) limit = 10;
@@ -283,10 +384,10 @@ module.exports = class DocumentController {
         }
 
         if (!name && !checkStatus) {
-            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: parseInt(page), limit: limit, select: "name key jobId checkStatus jobStatus uploaded_at" })
+            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: parseInt(page), limit: limit, select: select })
             return res.status(200).json(docs)
         }
-        var docs = await Document.paginate(query, { page: parseInt(page), limit: limit, select: "name key jobId checkStatus jobStatus uploaded_at" })
+        var docs = await Document.paginate(query, { page: parseInt(page), limit: limit, select: select })
         return res.status(200).json(docs)
     }
 
@@ -329,23 +430,8 @@ module.exports = class DocumentController {
         let doc = await Document.findOne(query)
 
         await doc.updateOne(req.body)
-        var date = formatted_date.split("/")
-
-        try {
-            if (date.length == 3) {
-                doc.date.day = date[0];
-                doc.date.month = date[1];
-                doc.date.year = date[2];
-            }
-        } catch (error) {
-
-        }
 
         doc.checkStatus = 3;
-        var xdate = doc.formatted_date.split("/");
-        xdate = xdate[2] + "-" + xdate[1] + "-" + xdate[0];
-        doc.date_query = doc.date.year + "-" + doc.date.month + "-" + doc.date.day;
-
         await doc.save();
         return res.status(200).json({ message: "updated successfully" })
     }
@@ -378,40 +464,7 @@ module.exports = class DocumentController {
     async confirm(req, res) {
         const { jobId } = req.body;
 
-        var doc = await Document.findOne({ jobId: jobId });
-
-        if (doc.checkStatus === 4) {
-            return res.status(403).json({ message: "document has been already moved" })
-        }
-        // else if (doc.checkStatus != 3) {
-        //     return res.status(403).json({ message: "document can't be moved without be checked before" })
-        // }
-        doc.checkStatus = 4;
-        await doc.save();
-        const obj = await s3.getObject(doc.key, cleanBucket);
-        var nameFile = `${doc.year} ${doc.fatherLastname} ${doc.motherLastname}.pdf`;
-
-        var coreOptions = {
-            siteUrl: 'https://lumston.sharepoint.com/sites/Softwareengineering'
-        };
-        var creds = {
-            username: 'eguerrero@lumston.com',
-            password: 'shericksam1996A'
-        };
-        var fileOptions = {
-            folder: 'Documentos compartidos/OCR Expedientes',
-            fileName: nameFile,
-            fileContent: obj.Body
-        };
-        spsave(coreOptions, creds, fileOptions)
-            .then(function () {
-                console.log('saved');
-                return res.status(200).json({ message: "files saved" })
-            })
-            .catch(function (err) {
-                console.log(err);
-                return res.status(err.statusCode).json({ message: "An error has ocurred", error: err });
-            });
+        confirmAndShare(jobId, res);
         // return res.status(200).json({ message: "document was moved" });
     }
 
@@ -421,7 +474,7 @@ module.exports = class DocumentController {
         var doc = await Document.findOne({ jobId: jobId });
         const obj = await s3.getObject(doc.key, cleanBucket);
         console.log(obj);
-        return res.status(200).json( {obj: obj.Body});
+        return res.status(200).json({ obj: obj.Body });
     }
 
     /**

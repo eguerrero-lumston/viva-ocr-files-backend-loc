@@ -40,14 +40,15 @@ module.exports = class Parser {
                 indexBeforeFile = index;
             }
             if (index === (indexBeforeName + 1)) {
-                var keyUpper = key.toLowerCase();
-                var fullname = keyUpper.replace("A:", "").trim();
-                var fullname = keyUpper.replace("MR.", "").trim();
-                var fullname = keyUpper.replace("MRS.", "").trim();
+                var keyLower = key.toLowerCase().trim();
+                // console.log('keyLower------>', keyLower);
+                keyLower = keyLower.replace("a:", "").trim();
+                keyLower = keyLower.replace("mr.", "").trim();
+                keyLower = keyLower.replace("mrs.", "").trim();
 
                 if (!isLastnameFirst)
-                    isLastnameFirst = fullname.includes(",");
-                var fullname = keyUpper.replace(",", "").trim();
+                    isLastnameFirst = keyLower.includes(",");
+                var fullname = keyLower.replace(",", "").trim();
                 // console.log('fullname--->', fullname)
                 var arr = fullname.split(" ");
                 if (arr.length < 2) return;
@@ -70,9 +71,9 @@ module.exports = class Parser {
 
             }
             if (index === (indexBeforeFile + 1)) {
-                var keyUpper = key.toLowerCase();
-                // console.log('course--->', keyUpper);
-                (matches.courseName === "") ? matches.courseName = keyUpper : null;
+                var keyLower = key.toLowerCase();
+                // console.log('course--->', keyLower);
+                (matches.courseName === "") ? matches.courseName = keyLower : null;
             }
             /*else if(){
                 
