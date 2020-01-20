@@ -2,7 +2,7 @@ const HummusRecipe = require('hummus-recipe');
 const imagesToPdf = require("images-to-pdf")
 const path = require('path');
 var fs = require('fs');
-var touch = require("touch")
+var touch = require("touch");
 
 module.exports = class PDFManager{
 
@@ -14,18 +14,36 @@ module.exports = class PDFManager{
      * @param {String} output the path where folder with separated PDFs will be created
      * @param {String} input the PDF file path that will be separated by pages
      */
-    async split(output,input){
+    async split(output, input){
         
         const inp = path.join(__dirname,"pdfuploads", input);
         const outputDir = path.join(__dirname, output);
         
-        const pdfDoc = new HummusRecipe(inp);   
+        // const pdfDoc = new HummusRecipe(inp);   
         
         if (!fs.existsSync(outputDir)){
             fs.mkdirSync(outputDir);
         }
-        pdfDoc.split(outputDir, 'file-page').endPDF();
-        
+        // pdfDoc.split(outputDir, 'file-page').endPDF();
+        const pdfDoc = new HummusRecipe(inp, 'output.pdf');
+        console.log('pdfDoc.metadata.pages', pdfDoc.metadata.pages);
+        for (let index = 0; index < pdfDoc.metadata.pages; index++) {
+            // const element = pdfD[index];
+            var page = (index + 1);
+            var completePdf = outputDir + '/file-page' + page + '.pdf';
+            console.log('page--->', page, completePdf);
+            if (page % 2 == 1) {
+                var pages = [page];
+                const newpdfDoc = new HummusRecipe('new', completePdf);
+                if (pdfDoc.metadata.pages > 1){
+                    pages.push(page + 1);
+                }
+                console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
+                newpdfDoc
+                .appendPage(inp, pages)
+                .endPDF();
+            }
+        }
         return outputDir;
     }
 
@@ -49,7 +67,12 @@ module.exports = class PDFManager{
                     const file = files[index];
                     var file_p = path.join(directoryPath,file);
                     var pdf = fs.readFileSync(file_p);
-                    // console.log('file_p', file, file.match(/\d+/));
+                    console.log('file_p------>', file_p);
+                    const config = {
+                        lang: "spa",
+                        oem: 1,
+                        psm: 3,
+                    }
                     var page = Number(file.match(/\d+/)[0]);
                     if (page % 2 == 1) {
                         var npdf = {path:file_p,data:pdf}

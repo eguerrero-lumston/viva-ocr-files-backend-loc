@@ -27,7 +27,7 @@ module.exports = class Parser {
 
         filter.forEach((elem, index) => {
             const key = elem.Text;
-            // console.log('elem ------->', index, key);
+            console.log('elem ------->', index, key);
             if (regex.regexDateFormat(key)) {
                 var expresion = /(\d{4})/;
                 (matches.year === 0) ? matches.year = Number(key.match(expresion)[0]) : null;
@@ -36,44 +36,71 @@ module.exports = class Parser {
             } else if (regex.regexIsBeforeTwoLinesName(key) && indexBeforeName === -2) {
                 indexBeforeName = index + 1;
                 isLastnameFirst = true;
-            } else if (regex.regexIsBeforeFile(key) && indexBeforeFile === -2) {
+            }
+            if (regex.regexIsBeforeFile(key) && indexBeforeFile === -2) {
                 indexBeforeFile = index;
             }
             if (index === (indexBeforeName + 1)) {
                 var keyLower = key.toLowerCase().trim();
-                // console.log('keyLower------>', keyLower);
+                console.log('keyLower------>', keyLower);
                 keyLower = keyLower.replace("a:", "").trim();
                 keyLower = keyLower.replace("mr.", "").trim();
                 keyLower = keyLower.replace("mrs.", "").trim();
 
+                var regexWord = /\b(del|de)\b/g
+                var wordUnion = keyLower.match(regexWord) !== null ? keyLower.match(regexWord)[0] + ' ' : '';
+
+                console.log('isLastnameFirst wordUnion----->', isLastnameFirst, wordUnion);
                 if (!isLastnameFirst)
                     isLastnameFirst = keyLower.includes(",");
                 var fullname = keyLower.replace(",", "").trim();
-                // console.log('fullname--->', fullname)
+                console.log('fullname--->', fullname);
                 var arr = fullname.split(" ");
-                if (arr.length < 2) return;
+                console.log('array fullname--->', arr);
 
-                if (arr.length === 3){
+                if (arr.length < 2) return;
+                if (wordUnion) {
+                    let indexss = arr.indexOf("de") !== -1 ? arr.indexOf("de") : arr.indexOf("del");
+
+                    if (indexss !== -1) {
+                        var withA = arr[indexss + 1] !== undefined && arr[indexss + 1] == "la";
+                        var newWordName = `${arr[indexss]} ${withA ? `${arr[indexss + 1]} ${arr[indexss + 2] || ''}` : arr[indexss + 1]}`
+                        console.log(`arraaaaay ${indexss} ---------> ${newWordName}`);
+                        arr.splice(indexss, withA ? 3 : 2, newWordName);
+                        console.log(`newarraay `, arr);
+
+
+                    }
+                    console.log(`araaaaay ${indexss} ---------> ${arr[indexss]} ${arr[indexss + 1]}`)
+                    // if (arr[indexss + 1] !== undefined && arr[indexss + 1] == "la") {
+
+                    // }
+                }
+                if (arr.length === 3) {
                     var iName = isLastnameFirst ? 2 : 0;
-                    var iFather = isLastnameFirst ? 0 : 2;
-                    var iMother = 1;
-                    (matches.name === "") ? matches.name = (arr[iName]) : null;
-                    (matches.fatherLastname === "") ? matches.fatherLastname = (arr[iFather]) : null;
-                    (matches.motherLastname === "") ? matches.motherLastname = (arr[iMother]) : null;
-                }else{
+                    var iFather = isLastnameFirst ? 0 : 1;
+                    var iMother = isLastnameFirst ? 1 : 2;
+                    (matches.name === "") ? matches.name = (arr[iName]) : '';
+                    (matches.fatherLastname === "") ? matches.fatherLastname = (arr[iFather]) : '';
+                    (matches.motherLastname === "") ? matches.motherLastname = (arr[iMother]) : '';
+                } else {
                     var iName = isLastnameFirst ? (arr[2]) + " " + (arr[3]) : (arr[0]) + " " + (arr[1]);
                     var iFather = isLastnameFirst ? (arr[0]) : (arr[2]);
                     var iMother = isLastnameFirst ? (arr[1]) : (arr[3]);
-                    (matches.name === "") ? matches.name =  iName : null;
-                    (matches.fatherLastname === "") ? matches.fatherLastname = iFather : null;
-                    (matches.motherLastname === "") ? matches.motherLastname = iMother : null;
-                }
+                    (matches.name === "") ? matches.name = iName : '';
+                    (matches.fatherLastname === "") ? matches.fatherLastname = iFather : '';
+                    (matches.motherLastname === "") ? matches.motherLastname = iMother : '';
+                } 
+                // else if (arr.length > 5) {
+                    
+
+                // }
 
             }
             if (index === (indexBeforeFile + 1)) {
-                var keyLower = key.toLowerCase();
-                // console.log('course--->', keyLower);
-                (matches.courseName === "") ? matches.courseName = keyLower : null;
+                var keyLower = key.toLowerCase().trim();
+                console.log('course--->', keyLower);
+                (matches.courseName === "") ? matches.courseName = keyLower : '';
             }
             /*else if(){
                 

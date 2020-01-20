@@ -1,5 +1,8 @@
 
 var DocumentType = model('DocTypeModel', 'Mongo');
+var mongoose = require('mongoose');
+
+
 
 module.exports = class DocumentTypeController {
 
@@ -13,12 +16,12 @@ module.exports = class DocumentTypeController {
     async add(req, res) {
         // return res.status(200).json(req.body);
 
-        const { position, name, textToRecognize } = req.body;
+        const { positionId, name, textToRecognize } = req.body;
 
         let doc = new DocumentType();
         doc.textToRecognize = textToRecognize;
         doc.name = name;
-        doc.position = position;
+        doc.position = positionId;
 
         await doc.save(function (err) {
             if (err) return res.status(409).json({ message: "An error has ocurred", error: err });
@@ -36,20 +39,36 @@ module.exports = class DocumentTypeController {
         const { id, name } = req.query
         
         if (!id && !name) {
-            var docs = await DocumentType.paginate({ deleted: null }, { page: 1, limit: 10, select: "_id name position", virtuals: true  })
+            var options = {
+                page: 1,
+                populate: 'position',
+                select: "_id name position textToRecognize",
+                limit: 10
+            };
+            var docs = await DocumentType.paginate({ deleted: null }, options)
             return res.status(200).json(docs)
         }
         var doc;
         if (id) {
-            doc = await DocumentType.findOne({ _id: id })
+            doc = await DocumentType.findOne({ _id: id }).populate('position')
         }
         else if (name) {
-            doc = await DocumentType.findOne({ name: name })
+            doc = await DocumentType.findOne({ name: name }).populate('position')
         } else {
             doc = {}
         }
         doc.toObject({ virtuals: true });
         return res.status(200).json(doc)
+    }
+    /**
+     * this function gets uploaded documents
+     * and stored in database
+     * 
+     */
+
+    async all(req, res) {
+        var typeDoc = await DocumentType.find({ textToRecognize: { $ne: null } })
+        return res.status(200).json(typeDoc)
     }
 
     /**
@@ -76,12 +95,17 @@ module.exports = class DocumentTypeController {
             query["name"] = { "$regex": name, "$options": "i" };
 
         }
-
+        var options = {
+            page: parseInt(page),
+            populate: 'position',
+            select: "_id name position textToRecognize",
+            limit: limit
+        };
         if (!name) {
-            var docs = await DocumentType.paginate({ deleted: null }, { page: parseInt(page), limit: limit, select: "_id name position" })
+            var docs = await DocumentType.paginate({ deleted: null }, options)
             return res.status(200).json(docs)
         }
-        var docs = await DocumentType.paginate(query, { page: parseInt(page), limit: limit, select: "_id name position" })
+        var docs = await DocumentType.paginate(query, options)
         return res.status(200).json(docs)
     }
 
@@ -116,13 +140,14 @@ module.exports = class DocumentTypeController {
      * 
      */
     async update(req, res) {
-        const { _id, textToRecognize } = req.body;
+        const { _id, positionId } = req.body;
         var query = { _id}
         // query['_id'] = id;
-
         let doc = await DocumentType.findOne(query)
-        doc.textToRecognize = textToRecognize;
-        await doc.updateOne(req.body, function (err, result) {
+        console.log(doc, positionId)
+        doc.position = positionId;
+        await doc.updateOne(req.body);
+        await doc.save(function (err, result) {
             if (err) return res.status(409).json({ message: "An error has ocurred", error: err });
             return res.status(200).json({ message: `updated successfully ${result.n} documents` })
         });

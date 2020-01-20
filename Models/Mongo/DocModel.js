@@ -29,6 +29,7 @@ var Doc = new Schema({
     page: { type: Number },
     uploaded_at: { type: Date, default: Date.now() },
     course: { type: Schema.Types.ObjectId, ref: "docTypes" },
+    position: { type: Schema.Types.ObjectId, ref: "positions" }
 });
 
 Doc.pre('save', function (next) {

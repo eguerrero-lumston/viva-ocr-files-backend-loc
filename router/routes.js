@@ -4,10 +4,10 @@ var apiMiddleware = require("../Middlewares/apiMiddleware");
 var cors = require('cors');
 
 var DocController = new (require("../Controllers/DocumentController"))
-var ShareponiController = new (require("../Controllers/ShareponiController"))
 var DocTypeController = new (require("../Controllers/DocumentTypeController"))
 var ReportsController = new (require("../Controllers/ReportController"))
 var UserController = new (require("../Controllers/UserController"))
+var PositionController = new (require("../Controllers/PositionController"))
 var bodyParser = require('body-parser');
 routes.use(bodyParser.json({ limit: '10mb', extended: true }))
 
@@ -64,15 +64,20 @@ routes.group("/api", (router) => {
     //Reports resources
     router.get('/reports', ReportsController.all)
     router.get('/reports/not-generated', ReportsController.notGenerated)
-
-    router.get('/activeD', ShareponiController.upload)
     
     // Users
-    router.post('/users', UserController.add) // upload document to store in s3 
+    router.post('/users', UserController.add) // upload user 
+
     router.get('/users', throttle({ "burst": 5, "period": "1s" }), UserController.find) // get a list of users stored 
-    router.put('/users', UserController.update) // update a manifest doc in database and moves to s3 folder 
-    router.delete('/users/:id', UserController.delete) // deletes a document given a jobId 
-    router.get('/users/filter/table', UserController.tableFilter) // look for documents with specific name and checkStatus 1, 2 or 3
+    router.put('/users', UserController.update) // update a user  
+    router.delete('/users/:id', UserController.delete) // deletes a user given a id 
+    router.get('/users/filter/table', UserController.tableFilter) // look for users with specific name 
 
-
+    // Positions
+    router.post('/positions', PositionController.add) // upload position 
+    router.get('/positions-all', PositionController.all) // get all positions
+    router.get('/positions', throttle({ "burst": 5, "period": "1s" }), PositionController.find) // get a list of positions stored 
+    router.put('/positions', PositionController.update) // update a position  
+    router.delete('/positions/:id', PositionController.delete) // deletes a position given a jobId 
+    router.get('/positions/filter/table', PositionController.tableFilter) // look for positions with specific name 
 })

@@ -67,10 +67,11 @@ module.exports = class RegexFile{
      */
     regexDateFormat(word){
         word = word.toLowerCase();
-        var date_exp = /((([0-9])|([0-2][0-9])|([3][0-1]))\ de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\ de \d{4})/
-        var date_exp2 = /((([0-9])|([0-2][0-9])|([3][0-1]))\ de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\ del \d{4})/
+        var date_exp = /((([0-9])|([0-2][0-9])|([3][0-1]))\ de (enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\ (del|de) \d{4})/
+        var monthYear = /((enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\ (del|de) \d{4})/
+
         var date_exp_english = /\d{2}\-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\-\d{4}/
-        var isdate = (word.match(date_exp) != null || word.match(date_exp2) != null || word.match(date_exp_english)) ;
+        var isdate = (word.match(date_exp) !== null || word.match(date_exp_english) !== null || word.match(monthYear) !== null) ;
         // console.log('word---->', word);
         // console.log('isdate---->', isdate);
         return isdate;
@@ -85,7 +86,7 @@ module.exports = class RegexFile{
         word = word.toLowerCase();
         var isBefore = (word.includes("reconocimiento a:") || word.includes("certificado") || word.includes("certifies"));
         var n = word.includes("world");
-        // console.log('word---->', word);
+        // console.log('word 1---->', word);
         // console.log('isBefore---->', isBefore);
         return isBefore;
     }
@@ -100,7 +101,7 @@ module.exports = class RegexFile{
         var isBefore = (word.includes("constancia") );
         var n = word.includes("world");
         // console.log('word---->', word);
-        // console.log('isBefore---->', isBefore);
+        // console.log('isBefore two---->', isBefore);
         return isBefore;
     }
 
@@ -111,7 +112,7 @@ module.exports = class RegexFile{
      */
     regexIsBeforeFile(word){
         word = word.toLowerCase();
-        var isBeforeFile = (word.includes("curso:") || word.includes("curso ") || word.includes("completed"));
+        var isBeforeFile = (word.includes("curso:") || word.includes("curso") || word.includes("completed"));
         // console.log('word---->', word);
         // console.log('isBeforeFile---->', isBeforeFile);
         return isBeforeFile;

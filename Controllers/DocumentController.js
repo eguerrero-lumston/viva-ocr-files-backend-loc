@@ -35,50 +35,57 @@ const sleep = (milliseconds) => {
 
 
 const confirmAndShare = async (jobId, res) => {
-    var doc = await Document.findOne({ jobId: jobId }).populate('course');
+    var doc = await Document.findOne({ jobId: jobId }).populate('course').populate('position');
 
     if (doc.checkStatus === 4) {
         if (res)
             return res.status(403).json({ message: "document has been already moved" });
         else
             return;
+    } else if (doc.checkStatus != 3) {
+        return res.status(403).json({ message: "document can't be moved without be checked before" })
     }
-    // else if (doc.checkStatus != 3) {
-    //     return res.status(403).json({ message: "document can't be moved without be checked before" })
-    // }
-    doc.checkStatus = 4;
-    await doc.save();
     const obj = await s3.getObject(doc.key, cleanBucket);
     var courseName = doc.course != null ? doc.course.name : '';
-    var nameFile = `${doc.year} ${doc.fatherLastname} ${doc.motherLastname}  ${courseName}.pdf`;
+    var nameFile = `${doc.year}-${toCapitalize(doc.fatherLastname)} ${toCapitalize(doc.motherLastname)}-${toCapitalize(courseName)}` + `.pdf`;
+    var fullname = `${doc.fatherLastname} ${doc.motherLastname} ${doc.name}`.toUpperCase();
+    var folder = doc.position.name;
 
+    doc.checkStatus = 4;
+    await doc.save();
     var coreOptions = {
-        siteUrl: 'https://lumston.sharepoint.com/sites/Softwareengineering'
+        siteUrl: 'https://vivaaerobus.sharepoint.com/Operaciones'
     };
     var creds = {
-        username: 'eguerrero@lumston.com',
-        password: 'shericksam1996A'
+        username: 'soporte.lumston@vivaaerobus.com',
+        password: 'S0p0rt3Lum$ton'
     };
     var fileOptions = {
-        folder: 'Documentos compartidos/OCR Expedientes',
+        folder: 'Expedientes/' + folder + '/' + fullname + '/CERTIFICADOS',
         fileName: nameFile,
         fileContent: obj.Body
     };
-    spsave(coreOptions, creds, fileOptions)
-        .then(function () {
-            console.log('saved');
-            if (res)
-                return res.status(200).json({ message: "files saved" });
-            else
-                return;
-        })
-        .catch(function (err) {
-            console.log(err);
-            if (res)
-                return res.status(err.statusCode).json({ message: "An error has ocurred", error: err });
-            else
-                return;
-        });
+    console.log('paaath------>', 'Expedientes/' + folder + '/' + fullname + '/CERTIFICADOS' + '/' + nameFile);
+    // spsave(coreOptions, creds, fileOptions)
+    //     .then(function () {
+    //         console.log('saved');
+
+    //         if (res)
+    //             return res.status(200).json({ message: "files saved" });
+    //         else
+    //             return;
+    //     })
+    //     .catch(function (err) {
+    //         console.log(err);
+    //         if (res)
+    //             return res.status(err.statusCode).json({ message: "An error has ocurred", error: err });
+    //         else
+    //             return;
+    //     });
+}
+
+function toCapitalize(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 module.exports = class DocumentController {
@@ -95,6 +102,7 @@ module.exports = class DocumentController {
      */
     async uploadDoc(req, res) {
         let doc = req.files.document;
+        let { position } = req.body;
         let pdf = new PDFManager();
 
         var tmp = "./util/pdfuploads/";
@@ -128,13 +136,12 @@ module.exports = class DocumentController {
 
         let out = await pdf.split(fname_no_ext, fname_no_ext + ".pdf");
         let files = await pdf.iterate(out);
-
         new Promise(async (resolve, reject) => {
 
             for (let index = 0; index < files.length; index++) {
                 const file = files[index];
                 await sleep(5000);
-                await this.upload(file.data, ".pdf");
+                await this.upload(file.data, ".pdf", position);
             }
             pdf.deleteFolderRecursive(out)
             fs.unlinkSync(to);
@@ -154,7 +161,7 @@ module.exports = class DocumentController {
      * when document is uploaded, starts to analayze it and store 
      * record in database od this document
      */
-    async upload(data, ext) {
+    async upload(data, ext, position) {
 
         let d = new Date();
         var fname = "File" + d.getDay() + d.getMonth() + d.getFullYear() + d.getMilliseconds() + ext;
@@ -165,6 +172,7 @@ module.exports = class DocumentController {
         let new_doc = new Document();
         new_doc.name = fname;
         new_doc.key = fname;
+        new_doc.position = position;
 
         if (ext == ".pdf") {
             const job = await tt.analizeDocumentAsync(fname)
@@ -205,7 +213,7 @@ module.exports = class DocumentController {
     */
     async analyzeDoc(jid) {
 
-        var obj = await Document.findOne({ jobId: jid })
+        var obj = await Document.findOne({ jobId: jid }).populate('position');
         if (obj.checkStatus != 0) {
             return null;
         }
@@ -238,7 +246,7 @@ module.exports = class DocumentController {
             obj.pages = 1;
             obj.page = 1;
             // obj.
-            await Block.deleteMany({ jobId: jid }) // delete blocks, these won't be used anymore
+            // await Block.deleteMany({ jobId: jid }) // delete blocks, these won't be used anymore
             const accentsTidy = function (s) {
                 var r = s.toLowerCase();
                 r = r.replace(new RegExp(/\s/g), "");
@@ -267,12 +275,19 @@ module.exports = class DocumentController {
                         if (doctype.textToRecognize !== '') {
                             var textToRecognize = accentsTidy(doctype.textToRecognize);
                             var text = accentsTidy(ob.matches.courseName);
-                            console.log('doctype', textToRecognize.includes(text), doctype);
-                            if (textToRecognize.includes(text)) {
-                                obj.course = doctype._id;
-                                // console.log('obj.course------------>', obj.course)
-                                return;
+
+                            if (text.length >= textToRecognize.length && text !== '' && textToRecognize !== '') {
+                                console.log('doctype---->', text, text.includes(textToRecognize), textToRecognize);
+                                if (text.includes(textToRecognize)) {
+                                    obj.course = doctype._id;
+                                }
+                            } else if (text !== '' && textToRecognize !== '') {
+                                console.log('doctype t2r 1---->', text, textToRecognize.includes(text), textToRecognize);
+                                if (textToRecognize.includes(text)) {
+                                    obj.course = doctype._id;
+                                }
                             }
+
                         }
                         // if (doctype){
                         //     obj.course = doctype._id;
@@ -283,7 +298,7 @@ module.exports = class DocumentController {
                             ob.matches.name != "" &&
                             ob.matches.motherLastname != "" &&
                             ob.matches.fatherLastname != "" &&
-                            obj.course != null) {
+                            (obj.course !== null && obj.course !== undefined && obj.course !== '')) {
                             obj.checkStatus = 3;
                         } else {
                             obj.checkStatus = 1;
@@ -293,14 +308,15 @@ module.exports = class DocumentController {
                     obj.save();
                 }
             });
-            if(obj.checkStatus == 3){
+            if (obj.checkStatus == 3) {
                 confirmAndShare(jid);
-            }
+            } 
 
         } catch (error) {
             //if throws error, revert checkStatus
             console.log(error);
             obj.jobStatus = "NOT_PROCESSING";
+            obj.checkStatus = 0;
             await obj.save();
         }
         return obj;
@@ -348,7 +364,8 @@ module.exports = class DocumentController {
         } else {
             doc = {}
         }
-        return res.status(200).json(doc)
+        var typeDoc = await DocType.find({ textToRecognize: { $ne: null } })
+        return res.status(200).json({ doc, typeDoc })
     }
 
     /**
@@ -383,11 +400,17 @@ module.exports = class DocumentController {
             query["checkStatus"] = { $in: sta };
         }
 
+        var options = {
+            page: parseInt(page),
+            populate: 'course',
+            select: "name year fatherLastname motherLastname key jobId checkStatus jobStatus uploaded_at",
+            limit: limit
+        };
         if (!name && !checkStatus) {
-            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, { page: parseInt(page), limit: limit, select: select })
+            var docs = await Document.paginate({ checkStatus: { $in: [0, 1, 2, 3] } }, options);
             return res.status(200).json(docs)
         }
-        var docs = await Document.paginate(query, { page: parseInt(page), limit: limit, select: select })
+        var docs = await Document.paginate(query, options)
         return res.status(200).json(docs)
     }
 
@@ -423,12 +446,12 @@ module.exports = class DocumentController {
      */
     async update(req, res) {
 
-        const { jobId, name, formatted_date } = req.body;
+        const { jobId, name, courseId } = req.body;
         var query = {}
         query['jobId'] = jobId;
 
         let doc = await Document.findOne(query)
-
+        doc.course = courseId;
         await doc.updateOne(req.body)
 
         doc.checkStatus = 3;
