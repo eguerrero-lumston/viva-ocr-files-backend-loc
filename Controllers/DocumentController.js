@@ -102,7 +102,7 @@ module.exports = class DocumentController {
      */
     async uploadDoc(req, res) {
         let doc = req.files.document;
-        let { position } = req.body;
+        let { position, sheets } = req.body;
         let pdf = new PDFManager();
 
         var tmp = "./util/pdfuploads/";
@@ -134,7 +134,7 @@ module.exports = class DocumentController {
             //pdf.deleteFile(out)
         }
 
-        let out = await pdf.split(fname_no_ext, fname_no_ext + ".pdf");
+        let out = await pdf.split(fname_no_ext, fname_no_ext + ".pdf", sheets);
         let files = await pdf.iterate(out);
         new Promise(async (resolve, reject) => {
 

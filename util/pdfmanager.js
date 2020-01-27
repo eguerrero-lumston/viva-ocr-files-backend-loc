@@ -13,8 +13,9 @@ module.exports = class PDFManager{
      * 
      * @param {String} output the path where folder with separated PDFs will be created
      * @param {String} input the PDF file path that will be separated by pages
+     * @param {String} format the PDF file format that will be separated by pages of 1 or 2
      */
-    async split(output, input){
+    async split(output, input, sheets){
         
         const inp = path.join(__dirname,"pdfuploads", input);
         const outputDir = path.join(__dirname, output);
@@ -32,12 +33,20 @@ module.exports = class PDFManager{
             var page = (index + 1);
             var completePdf = outputDir + '/file-page' + page + '.pdf';
             console.log('page--->', page, completePdf);
-            if (page % 2 == 1) {
+            if (page % 2 == 1 && sheets === '2') {
                 var pages = [page];
                 const newpdfDoc = new HummusRecipe('new', completePdf);
                 if (pdfDoc.metadata.pages > 1){
                     pages.push(page + 1);
                 }
+                console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
+                newpdfDoc
+                .appendPage(inp, pages)
+                .endPDF();
+            } else if (sheets === '1') {
+                var pages = [page];
+                const newpdfDoc = new HummusRecipe('new', completePdf);
+                
                 console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
                 newpdfDoc
                 .appendPage(inp, pages)
@@ -68,16 +77,12 @@ module.exports = class PDFManager{
                     var file_p = path.join(directoryPath,file);
                     var pdf = fs.readFileSync(file_p);
                     console.log('file_p------>', file_p);
-                    const config = {
-                        lang: "spa",
-                        oem: 1,
-                        psm: 3,
-                    }
+                    
                     var page = Number(file.match(/\d+/)[0]);
-                    if (page % 2 == 1) {
-                        var npdf = {path:file_p,data:pdf}
-                        files_path.push(npdf);
-                    }
+                    // if (page % 2 == 1) {
+                    var npdf = {path:file_p,data:pdf}
+                    files_path.push(npdf);
+                    // }
                 }
                 return resolve(files_path)
             });
