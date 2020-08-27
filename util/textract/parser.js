@@ -27,7 +27,7 @@ module.exports = class Parser {
 
         filter.forEach((elem, index) => {
             const key = elem.Text;
-            console.log('elem ------->', index, key);
+            // console.log('elem ------->', index, key);
             if (regex.regexDateFormat(key)) {
                 var expresion = /(\d{4})/;
                 (matches.year === 0) ? matches.year = Number(key.match(expresion)[0]) : null;
@@ -42,7 +42,7 @@ module.exports = class Parser {
             }
             if (index === (indexBeforeName + 1)) {
                 var keyLower = key.toLowerCase().trim();
-                console.log('keyLower------>', keyLower);
+                // console.log('keyLower------>', keyLower);
                 keyLower = keyLower.replace("a:", "").trim();
                 keyLower = keyLower.replace("mr.", "").trim();
                 keyLower = keyLower.replace("mrs.", "").trim();
@@ -50,13 +50,13 @@ module.exports = class Parser {
                 var regexWord = /\b(del|de)\b/g
                 var wordUnion = keyLower.match(regexWord) !== null ? keyLower.match(regexWord)[0] + ' ' : '';
 
-                console.log('isLastnameFirst wordUnion----->', isLastnameFirst, wordUnion);
+                // console.log('isLastnameFirst wordUnion----->', isLastnameFirst, wordUnion);
                 if (!isLastnameFirst)
                     isLastnameFirst = keyLower.includes(",");
                 var fullname = keyLower.replace(",", "").trim();
-                console.log('fullname--->', fullname);
+                // console.log('fullname--->', fullname);
                 var arr = fullname.split(" ");
-                console.log('array fullname--->', arr);
+                // console.log('array fullname--->', arr);
 
                 if (arr.length < 2) return;
                 if (wordUnion) {
@@ -65,13 +65,13 @@ module.exports = class Parser {
                     if (indexss !== -1) {
                         var withA = arr[indexss + 1] !== undefined && arr[indexss + 1] == "la";
                         var newWordName = `${arr[indexss]} ${withA ? `${arr[indexss + 1]} ${arr[indexss + 2] || ''}` : arr[indexss + 1]}`
-                        console.log(`arraaaaay ${indexss} ---------> ${newWordName}`);
+                        // console.log(`arraaaaay ${indexss} ---------> ${newWordName}`);
                         arr.splice(indexss, withA ? 3 : 2, newWordName);
-                        console.log(`newarraay `, arr);
+                        // console.log(`newarraay `, arr);
 
 
                     }
-                    console.log(`araaaaay ${indexss} ---------> ${arr[indexss]} ${arr[indexss + 1]}`)
+                    // console.log(`araaaaay ${indexss} ---------> ${arr[indexss]} ${arr[indexss + 1]}`)
                     // if (arr[indexss + 1] !== undefined && arr[indexss + 1] == "la") {
 
                     // }
@@ -99,7 +99,7 @@ module.exports = class Parser {
             }
             if (index === (indexBeforeFile + 1)) {
                 var keyLower = key.toLowerCase().trim();
-                console.log('course--->', keyLower);
+                // console.log('course--->', keyLower);
                 (matches.courseName === "") ? matches.courseName = keyLower : '';
             }
             /*else if(){
@@ -156,9 +156,9 @@ module.exports = class Parser {
             .populate({ path: 'value', populate: { path: 'child' } })
 
         filter.forEach(element => {
-            console.log(element)
+            // console.log(element)
             element.child.forEach(child => {
-                console.log("CHILDS: ", child)
+                // console.log("CHILDS: ", child)
             })
         });
         return filter

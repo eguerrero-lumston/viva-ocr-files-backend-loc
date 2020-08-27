@@ -265,7 +265,7 @@ module.exports = class DocumentController {
             };
             // var arrayOfTags = ob.matches.courseName.split(" ");
             // console.log('arrayOfTags', arrayOfTags); , $language: 'es', $caseSensitive: false, $diacriticSensitive: false 
-            await DocType.find({ textToRecognize: { $ne: null } }, function (err, doctypes) {
+            await DocType.find({ textToRecognize: { $ne: null } }, async function (err, doctypes) {
                 // await DocType.findOne( { $text: { $search: ob.matches.courseName } } , function (err, doctype) {
                 // await DocType.findOne( { textToRecognize: { $elemMatch: arrayOfTags, $exists: true } } , function (err, doctype) {
                 if (err) {
@@ -277,12 +277,12 @@ module.exports = class DocumentController {
                             var text = accentsTidy(ob.matches.courseName);
 
                             if (text.length >= textToRecognize.length && text !== '' && textToRecognize !== '') {
-                                console.log('doctype---->', text, text.includes(textToRecognize), textToRecognize);
+                                // console.log('doctype---->', text, text.includes(textToRecognize), textToRecognize);
                                 if (text.includes(textToRecognize)) {
                                     obj.course = doctype._id;
                                 }
                             } else if (text !== '' && textToRecognize !== '') {
-                                console.log('doctype t2r 1---->', text, textToRecognize.includes(text), textToRecognize);
+                                // console.log('doctype t2r 1---->', text, textToRecognize.includes(text), textToRecognize);
                                 if (textToRecognize.includes(text)) {
                                     obj.course = doctype._id;
                                 }
@@ -293,19 +293,22 @@ module.exports = class DocumentController {
                         //     obj.course = doctype._id;
                         // }
                     });
+
                     if (result.status == "SUCCEEDED") {
                         if (ob.matches.year != 0 &&
                             ob.matches.name != "" &&
                             ob.matches.motherLastname != "" &&
                             ob.matches.fatherLastname != "" &&
                             (obj.course !== null && obj.course !== undefined && obj.course !== '')) {
+                                // console.log("va a ser confirmado --->", ob.matches.name);
                             obj.checkStatus = 3;
                         } else {
+                            // console.log("NO PUDO ser confirmado --->", obj);
                             obj.checkStatus = 1;
                         }
                     }
                     // console.log('saved------------>', obj.course)
-                    obj.save();
+                    await obj.save();
                 }
             });
             if (obj.checkStatus == 3) {

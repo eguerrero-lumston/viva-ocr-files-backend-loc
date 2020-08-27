@@ -27,19 +27,19 @@ module.exports = class PDFManager{
         }
         // pdfDoc.split(outputDir, 'file-page').endPDF();
         const pdfDoc = new HummusRecipe(inp, 'output.pdf');
-        console.log('pdfDoc.metadata.pages', pdfDoc.metadata.pages);
+        // console.log('pdfDoc.metadata.pages', pdfDoc.metadata.pages);
         for (let index = 0; index < pdfDoc.metadata.pages; index++) {
             // const element = pdfD[index];
             var page = (index + 1);
             var completePdf = outputDir + '/file-page' + page + '.pdf';
-            console.log('page--->', page, completePdf);
+            // console.log('page--->', page, completePdf);
             if (page % 2 == 1 && sheets === '2') {
                 var pages = [page];
                 const newpdfDoc = new HummusRecipe('new', completePdf);
                 if (pdfDoc.metadata.pages > 1){
                     pages.push(page + 1);
                 }
-                console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
+                // console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
                 newpdfDoc
                 .appendPage(inp, pages)
                 .endPDF();
@@ -47,7 +47,7 @@ module.exports = class PDFManager{
                 var pages = [page];
                 const newpdfDoc = new HummusRecipe('new', completePdf);
                 
-                console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
+                // console.log('newpdfDoc--->', newpdfDoc.isNewPDF);
                 newpdfDoc
                 .appendPage(inp, pages)
                 .endPDF();
@@ -76,7 +76,7 @@ module.exports = class PDFManager{
                     const file = files[index];
                     var file_p = path.join(directoryPath,file);
                     var pdf = fs.readFileSync(file_p);
-                    console.log('file_p------>', file_p);
+                    // console.log('file_p------>', file_p);
                     
                     var page = Number(file.match(/\d+/)[0]);
                     // if (page % 2 == 1) {
@@ -103,7 +103,7 @@ module.exports = class PDFManager{
             doc.mv(to, function(err) {
                 if (err)
                     reject(null);
-                console.log("MOVED FILE");
+                // console.log("MOVED FILE");
                 resolve(to);
             });
         });

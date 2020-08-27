@@ -72,7 +72,10 @@ module.exports = class RegexFile{
 
         var date_exp_english = /\d{2}\-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\-\d{4}/
         var isdate = (word.match(date_exp) !== null || word.match(date_exp_english) !== null || word.match(monthYear) !== null) ;
-        // console.log('word---->', word);
+        // 
+        // if(isdate){
+        //     console.log('word---->', word);
+        // }
         // console.log('isdate---->', isdate);
         return isdate;
     }
@@ -84,10 +87,13 @@ module.exports = class RegexFile{
      */
     regexIsBeforeName(word){
         word = word.toLowerCase();
-        var isBefore = (word.includes("reconocimiento a:") || word.includes("certificado") || word.includes("certifies"));
+        var isBefore = (word.includes("reconocimiento a:") || word.includes("certificado") || word.includes("certifies") | word.includes("reconocimiento") || word.includes("certify"));
         var n = word.includes("world");
         // console.log('word 1---->', word);
         // console.log('isBefore---->', isBefore);
+        // if(isBefore){
+        //     console.log('word 1---->', word);
+        // }
         return isBefore;
     }
 
@@ -102,6 +108,9 @@ module.exports = class RegexFile{
         var n = word.includes("world");
         // console.log('word---->', word);
         // console.log('isBefore two---->', isBefore);
+        // if(isBefore){
+        //     console.log('isBefore two---->', word);
+        // }
         return isBefore;
     }
 
