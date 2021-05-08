@@ -58,7 +58,7 @@
     "socket.io": "^2.1.1",
     "socket.io-redis": "^5.2.0",
     "touch": "^3.1.0",
-    "ua-parser-js": "^0.7.18",
+    "ua-parser-js": "^0.7.24",
     "useragent": "^2.3.0",
     "uuid": "^3.3.2"
   },
