@@ -36,7 +36,7 @@
     "icomm_mysql": "^1.0.0",
     "images-to-pdf": "^1.0.3",
     "js-sha512": "^0.7.1",
-    "jsonwebtoken": "^8.3.0",
+    "jsonwebtoken": "^9.0.0",
     "moment": "^2.24.0",
     "moment-timezone": "^0.5.21",
     "mongodb": "^3.1.1",
